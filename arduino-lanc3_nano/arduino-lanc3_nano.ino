@@ -12,7 +12,7 @@
   2011, Martin Koch
   http://controlyourcamera.blogspot.com/2011/02/arduino-controlled-video-recording-over.html
 
-  camcorder commands:
+  camcorder Sony Hi8XR CCD-TR840E commands:
   byte 0 - 18hex - 0001 1000
 
   byte 1
