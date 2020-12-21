@@ -1,7 +1,6 @@
 /*
-  Send a Start/Sop Recording command to the LANC port of a video camera.
-  Tested with a Canon XF300 camcorder
-  This code requires a simple interface see http://micro.arocholl.com
+  Send a Start/Sop command to the LANC port of a video camera.
+  Tested with a Sony Hi8XR CCD-TR840E camcorder
   Feel free to use this code in any way you want.
 
   Comprehensive LANC info: www.boehmel.de/lanc.htm
@@ -9,17 +8,30 @@
   "LANC" is a registered trademark of SONY.
   CANON calls their LANC compatible port "REMOTE".
 
+  adapted from
   2011, Martin Koch
   http://controlyourcamera.blogspot.com/2011/02/arduino-controlled-video-recording-over.html
 
-
+  camcorder commands:
   byte 0 - 18hex
-  00011000
+  0001 1000
 
   byte 1
-  play 34hex - 00110100 -> 00101100
+  play 34hex - 0011 0100
   oder
-  stop 30hex - 00110000 -> 00001100
+  stop 30hex - 0011 0000
+
+  Z-CAM commands from here -> https://github.com/imaginevision/Z-Camera-Doc
+
+  | F1 press    | 55 54 00 00 00 00 00 00 | |
+  | F1 release  | 55 54 05 00 00 00 00 00 | |
+  | F2 press    | 55 54 0F 00 00 00 00 00 | |
+  | F2 release  | 55 54 10 00 00 00 00 00 | |
+  | F3 press    | 55 54 11 00 00 00 00 00 | |
+  | F3 release  | 55 54 12 00 00 00 00 00 | |
+
+  | Fn press    | 55 54 13 00 00 00 00 00 | Fn |
+  | Fn release  | 55 54 14 00 00 00 00 00 | |
 
 */
 
@@ -28,15 +40,24 @@
 #define recButton 4
 #define trigger 12
 #define LED LED_BUILTIN
+
+//A0=14, A1=15, usw.
+#define fake_pin 19
+
 int cmdRepeatCount;
-int bitDuration = 104; //Duration of one LANC bit in microseconds.
+int bitDuration = 104 - 1; //Duration of one LANC bit in microseconds.
 
 bool _play = 0;
-int _plinkertime = 50;
+bool _play_stop = 0;    //switch zwischen Hi8 Play/Stop oder Z-CAM F1_press/F1_release
+int _plinkertime = 700;
 
 //Start-stop video
-boolean _PLAY[] = {LOW, LOW, LOW, HIGH, HIGH, LOW, LOW, LOW,   LOW, LOW, HIGH, HIGH, LOW, HIGH, LOW, LOW}; //18 34
-boolean _STOP[] = {LOW, LOW, LOW, HIGH, HIGH, LOW, LOW, LOW,   LOW, LOW, HIGH, HIGH, LOW, LOW, LOW, LOW}; //18 30
+boolean _PLAY[] = {LOW, LOW, LOW, HIGH, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW}; //18 34 - 0001 1000 0011 0100
+boolean _STOP[] = {LOW, LOW, LOW, HIGH, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, HIGH, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW}; //18 30 - 0001 1000 0011 0000
+
+//Press release Fn
+boolean _FNPRESS[] =   {LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};   //55 54 00 - 0101 0101 0101 0100 0000 0000
+boolean _FNRELEASE[] = {LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, LOW, LOW, HIGH, LOW, HIGH}; //55 54 05 - 0101 0101 0101 0100 0000 0101
 
 void setup() {
   pinMode(lancPin, INPUT_PULLUP); //listens to the LANC line
@@ -44,42 +65,51 @@ void setup() {
   pinMode(recButton, INPUT_PULLUP); //start-stop recording button
   pinMode(trigger, OUTPUT); //writes to the LANC line
   pinMode(LED, OUTPUT);
+  pinMode(fake_pin, OUTPUT);
+
+  digitalWrite(fake_pin, HIGH);
   digitalWrite(recButton, HIGH); //turn on an internal pull up resistor
   digitalWrite(cmdPin, LOW); //set LANC line to +5V
   digitalWrite(trigger, HIGH);
   digitalWrite(LED, LOW);
+
   delay(1000); //Wait for camera to power up completly
+
   bitDuration = bitDuration - 8; //Writing to the digital port takes about 8 microseconds so only 96 microseconds are left till the end of each bit
 
   plinker_mal();
 }
 
 void loop() {
+  //#####button trigger?#####
   if (!digitalRead(recButton)) {
-    if (!_play) {
-      digitalWrite(trigger, HIGH);
 
-      //"18hex" or “00011000”
-      //play 34hex - 00110100
-      //PLAY(); //send REC command to camera
-      lancCommand(_PLAY);
-      _play = 1;
+    //#####boolean FN/FN#####
+    if (_play_stop == 0) {    //Umschalter zwischen Hi8 (1) zum testen oder Z-Cam (0)
+      lancCommand(_FNPRESS);
       plinker_mal();
-      digitalWrite(LED, HIGH);
-    }
-    else {
-      //"18hex" or “00011000”
-      //stop 30hex - 00110000<-
-      //STOP();
-      lancCommand(_STOP);
-      _play = 0;
-      digitalWrite(trigger, LOW);
-      digitalWrite(LED, LOW);
+
+      lancCommand(_FNRELEASE);
     }
 
-    delay(1000); //debounce button
-    //digitalWrite(trigger, HIGH);
-    //digitalWrite(LED, HIGH);
+    //#####boolean play/stop#####
+    if (_play_stop == 1) {    //Umschalter zwischen Hi8 (1) zum testen oder Z-Cam (0)
+      if (!_play) {
+        lancCommand(_PLAY);
+        _play = 1;
+        digitalWrite(trigger, HIGH);
+        plinker_mal();
+        digitalWrite(LED, HIGH);
+      }
+      else {
+        lancCommand(_STOP);
+        _play = 0;
+        digitalWrite(trigger, LOW);
+        digitalWrite(LED, LOW);
+      }
+
+      delay(100); //debounce button
+    }
   }
 }
 
@@ -126,6 +156,24 @@ void lancCommand(boolean lancBit[]) {
 
     //Byte 1 is written now put LANC line back to +5V
     digitalWrite(cmdPin, LOW);
+    delayMicroseconds(10); //make sure to be in the stop bit before byte 1
+
+    while (digitalRead(lancPin)) {
+      //Loop as long as the LANC line is +5V during the stop bit
+    }
+
+    //0V after the previous stop bit means the START bit of Byte 1 is here
+    delayMicroseconds(bitDuration);  //wait START bit duration
+
+    //Write the 8 bits of Byte 1
+    //Note that the command bits have to be put out in reverse order with the least significant, right-most bit (bit 0) first
+    for (int i = 23; i > 15; i--) {
+      digitalWrite(cmdPin, lancBit[i]); //Write bits
+      delayMicroseconds(bitDuration);
+    }
+
+    //Byte 2 is written now put LANC line back to +5V
+    digitalWrite(cmdPin, LOW);
 
     cmdRepeatCount++;  //increase repeat count by 1
 
@@ -136,11 +184,13 @@ void lancCommand(boolean lancBit[]) {
   }//While cmdRepeatCount < 5
 }
 
-void plinker_mal(){
-  for (int i=0 ; i < 3 ; i++) {
+void plinker_mal() {
+  for (int i = 0 ; i < 1 ; i++) {
     digitalWrite(LED, HIGH);
-    delay(_plinkertime);
+    digitalWrite(trigger, HIGH);
+    delayMicroseconds(_plinkertime);
     digitalWrite(LED, LOW);
-    delay(_plinkertime);
+    digitalWrite(trigger, LOW);
+    delayMicroseconds(_plinkertime);
   }
 }
