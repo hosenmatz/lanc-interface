@@ -18,9 +18,7 @@
   byte 1
   play 34hex - 0011 0100
   or
-  stop 30hex - 0011 0000
-
-  
+  stop 30hex - 0011 0000  
 
   Z-CAM commands from here -> https://github.com/imaginevision/Z-Camera-Doc
 
@@ -34,6 +32,9 @@
   | Fn press    | 55 54 13 00 00 00 00 00 | Fn |
   | Fn release  | 55 54 14 00 00 00 00 00 | |
 
+  time between two telegrams is 20ms
+  each telegram has to repeated 5 times
+  for Z-CAM there are two telegrams to send, therefore max framerate is 200ms -> 5Hz max (4.5Hz including jitter)
 */
 
 #define cmdPin 2 //7 
