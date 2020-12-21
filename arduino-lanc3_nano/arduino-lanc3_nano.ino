@@ -13,18 +13,19 @@
   http://controlyourcamera.blogspot.com/2011/02/arduino-controlled-video-recording-over.html
 
   camcorder commands:
-  byte 0 - 18hex
-  0001 1000
+  byte 0 - 18hex - 0001 1000
 
   byte 1
   play 34hex - 0011 0100
-  oder
+  or
   stop 30hex - 0011 0000
+
+  
 
   Z-CAM commands from here -> https://github.com/imaginevision/Z-Camera-Doc
 
-  | F1 press    | 55 54 00 00 00 00 00 00 | |
-  | F1 release  | 55 54 05 00 00 00 00 00 | |
+  | F1 press    | 55 54 00 00 00 00 00 00 | | - 0101 0101 0101 0100 0000 0000
+  | F1 release  | 55 54 05 00 00 00 00 00 | | - 0101 0101 0101 0100 0000 0101
   | F2 press    | 55 54 0F 00 00 00 00 00 | |
   | F2 release  | 55 54 10 00 00 00 00 00 | |
   | F3 press    | 55 54 11 00 00 00 00 00 | |
@@ -41,14 +42,14 @@
 #define trigger 12
 #define LED LED_BUILTIN
 
-//A0=14, A1=15, usw.
-#define fake_pin 19
+//A0=14, A1=15, usw. (in arduino nano A6 and A7 are assumingly not routed)
+#define fake_pin 14
 
 int cmdRepeatCount;
 int bitDuration = 104 - 1; //Duration of one LANC bit in microseconds.
 
 bool _play = 0;
-bool _play_stop = 0;    //switch zwischen Hi8 Play/Stop oder Z-CAM F1_press/F1_release
+bool _play_stop = 0;    //switch between Hi8 Play/Stop or Z-CAM F1_press/F1_release
 int _plinkertime = 700;
 
 //Start-stop video
@@ -85,7 +86,7 @@ void loop() {
   if (!digitalRead(recButton)) {
 
     //#####boolean FN/FN#####
-    if (_play_stop == 0) {    //Umschalter zwischen Hi8 (1) zum testen oder Z-Cam (0)
+    if (_play_stop == 0) {    //switch between Hi8 (1) or Z-Cam (0) for test purposes
       lancCommand(_FNPRESS);
       plinker_mal();
 
@@ -93,7 +94,7 @@ void loop() {
     }
 
     //#####boolean play/stop#####
-    if (_play_stop == 1) {    //Umschalter zwischen Hi8 (1) zum testen oder Z-Cam (0)
+    if (_play_stop == 1) {    //switch between Hi8 (1) or Z-Cam (0) for test purposes
       if (!_play) {
         lancCommand(_PLAY);
         _play = 1;
