@@ -24,13 +24,13 @@
 
   | F1 press    | 55 54 00 00 00 00 00 00 | | - 0101 0101 0101 0100 0000 0000
   | F1 release  | 55 54 05 00 00 00 00 00 | | - 0101 0101 0101 0100 0000 0101
-  | F2 press    | 55 54 0F 00 00 00 00 00 | |
-  | F2 release  | 55 54 10 00 00 00 00 00 | |
-  | F3 press    | 55 54 11 00 00 00 00 00 | |
-  | F3 release  | 55 54 12 00 00 00 00 00 | |
+  | F2 press    | 55 54 0F 00 00 00 00 00 | | - 0101 0101 0101 0100 0000 1111
+  | F2 release  | 55 54 10 00 00 00 00 00 | | - 0101 0101 0101 0100 0001 0000
+  | F3 press    | 55 54 11 00 00 00 00 00 | | - 0101 0101 0101 0100 0001 0001
+  | F3 release  | 55 54 12 00 00 00 00 00 | | - 0101 0101 0101 0100 0001 0010
 
-  | Fn press    | 55 54 13 00 00 00 00 00 | Fn |
-  | Fn release  | 55 54 14 00 00 00 00 00 | |
+  | Fn press    | 55 54 13 00 00 00 00 00 | | - 0101 0101 0101 0100 0001 0011
+  | Fn release  | 55 54 14 00 00 00 00 00 | | - 0101 0101 0101 0100 0001 0100
 
   time between two telegrams is 20ms
   each telegram has to repeated 5 times
@@ -58,8 +58,14 @@ boolean _PLAY[] = {LOW, LOW, LOW, HIGH, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, HIG
 boolean _STOP[] = {LOW, LOW, LOW, HIGH, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, HIGH, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW}; //18 30 - 0001 1000 0011 0000
 
 //Press release Fn
-boolean _FNPRESS[] =   {LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};   //55 54 00 - 0101 0101 0101 0100 0000 0000
-boolean _FNRELEASE[] = {LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, LOW, LOW, HIGH, LOW, HIGH}; //55 54 05 - 0101 0101 0101 0100 0000 0101
+boolean _F1PRESS[] =   {LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};   //55 54 00 - 0101 0101 0101 0100 0000 0000
+boolean _F1RELEASE[] = {LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, LOW, LOW, HIGH, LOW, HIGH}; //55 54 05 - 0101 0101 0101 0100 0000 0101
+boolean _F2PRESS[] =   {LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, LOW, HIGH, HIGH, HIGH, HIGH}; // 55 54 0F - 0101 0101 0101 0100 0000 1111
+boolean _F2RELEASE[] = {LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, LOW, LOW, LOW, LOW}; // 55 54 10 - 0101 0101 0101 0100 0001 0000
+boolean _F3PRESS[] =   {LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, LOW, LOW, LOW, HIGH}; // 55 54 11 - 0101 0101 0101 0100 0001 0001
+boolean _F3RELEASE[] = {LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, LOW, LOW, HIGH, LOW}; // 55 54 12 - 0101 0101 0101 0100 0001 0010
+boolean _FNPRESS[] =   {LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, LOW, LOW, HIGH, HIGH}; // 55 54 13 - 0101 0101 0101 0100 0001 0011
+boolean _FNRELEASE[] = {LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, LOW, HIGH, LOW, LOW}; // 55 54 14 - 0101 0101 0101 0100 0001 0100
 
 void setup() {
   pinMode(lancPin, INPUT_PULLUP); //listens to the LANC line
@@ -85,15 +91,12 @@ void setup() {
 void loop() {
   //#####button trigger?#####
   if (!digitalRead(recButton)) {
-
     //#####boolean FN/FN#####
     if (_play_stop == 0) {    //switch between Hi8 (1) or Z-Cam (0) for test purposes
-      lancCommand(_FNPRESS);
+      lancCommand(_F1PRESS);
       plinker_mal();
-
-      lancCommand(_FNRELEASE);
+      lancCommand(_F1RELEASE);
     }
-
     //#####boolean play/stop#####
     if (_play_stop == 1) {    //switch between Hi8 (1) or Z-Cam (0) for test purposes
       if (!_play) {
@@ -109,80 +112,60 @@ void loop() {
         digitalWrite(trigger, LOW);
         digitalWrite(LED, LOW);
       }
-
       delay(100); //debounce button
     }
   }
 }
 
-
 void lancCommand(boolean lancBit[]) {
-
   cmdRepeatCount = 0;
-
   while (cmdRepeatCount < 5) {  //repeat 5 times to make sure the camera accepts the command
-
     while (pulseIn(lancPin, HIGH) < 5000) {
       //"pulseIn, HIGH" catches any 0V TO +5V TRANSITION and waits until the LANC line goes back to 0V
       //"pulseIn" also returns the pulse duration so we can check if the previous +5V duration was long enough (>5ms) to be the pause before a new 8 byte data packet
       //Loop till pulse duration is >5ms
     }
-
     //LOW after long pause means the START bit of Byte 0 is here
     delayMicroseconds(bitDuration);  //wait START bit duration
-
     //Write the 8 bits of byte 0
     //Note that the command bits have to be put out in reverse order with the least significant, right-most bit (bit 0) first
     for (int i = 7; i > -1; i--) {
       digitalWrite(cmdPin, lancBit[i]);  //Write bits.
       delayMicroseconds(bitDuration);
     }
-
     //Byte 0 is written now put LANC line back to +5V
     digitalWrite(cmdPin, LOW);
     delayMicroseconds(10); //make sure to be in the stop bit before byte 1
-
     while (digitalRead(lancPin)) {
       //Loop as long as the LANC line is +5V during the stop bit
     }
-
     //0V after the previous stop bit means the START bit of Byte 1 is here
     delayMicroseconds(bitDuration);  //wait START bit duration
-
     //Write the 8 bits of Byte 1
     //Note that the command bits have to be put out in reverse order with the least significant, right-most bit (bit 0) first
     for (int i = 15; i > 7; i--) {
       digitalWrite(cmdPin, lancBit[i]); //Write bits
       delayMicroseconds(bitDuration);
     }
-
     //Byte 1 is written now put LANC line back to +5V
     digitalWrite(cmdPin, LOW);
     delayMicroseconds(10); //make sure to be in the stop bit before byte 1
-
     while (digitalRead(lancPin)) {
       //Loop as long as the LANC line is +5V during the stop bit
     }
-
     //0V after the previous stop bit means the START bit of Byte 1 is here
     delayMicroseconds(bitDuration);  //wait START bit duration
-
     //Write the 8 bits of Byte 1
     //Note that the command bits have to be put out in reverse order with the least significant, right-most bit (bit 0) first
     for (int i = 23; i > 15; i--) {
       digitalWrite(cmdPin, lancBit[i]); //Write bits
       delayMicroseconds(bitDuration);
     }
-
     //Byte 2 is written now put LANC line back to +5V
     digitalWrite(cmdPin, LOW);
-
     cmdRepeatCount++;  //increase repeat count by 1
-
     /*Control bytes 0 and 1 are written, now don’t care what happens in Bytes 2 to 7
       and just wait for the next start bit after a long pause to send the first two command bytes again.*/
-
-
   }//While cmdRepeatCount < 5
 }
 
