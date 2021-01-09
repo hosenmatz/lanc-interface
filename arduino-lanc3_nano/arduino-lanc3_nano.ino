@@ -18,7 +18,7 @@
   byte 1
   play 34hex - 0011 0100
   or
-  stop 30hex - 0011 0000  
+  stop 30hex - 0011 0000
 
   Z-CAM commands from here -> https://github.com/imaginevision/Z-Camera-Doc
 
@@ -52,6 +52,8 @@ int bitDuration = 104 - 1; //Duration of one LANC bit in microseconds.
 bool _play = 0;
 bool _play_stop = 0;    //switch between Hi8 Play/Stop or Z-CAM F1_press/F1_release
 int _plinkertime = 700;
+
+int _debouncetime = 120;
 
 //Start-stop video
 boolean _PLAY[] = {LOW, LOW, LOW, HIGH, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW}; //18 34 - 0001 1000 0011 0100
@@ -112,8 +114,8 @@ void loop() {
         digitalWrite(trigger, LOW);
         digitalWrite(LED, LOW);
       }
-      delay(100); //debounce button
     }
+    delay(_debouncetime); //debounce button
   }
 }
 
