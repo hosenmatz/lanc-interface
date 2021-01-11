@@ -12,6 +12,8 @@
   2011, Martin Koch
   http://controlyourcamera.blogspot.com/2011/02/arduino-controlled-video-recording-over.html
 
+  The distance between two telegrams is 20ms for PAL/625 and 16.6ms for NTSC/525
+  
   camcorder Sony Hi8XR CCD-TR840E commands:
   byte 0 - 18hex - 0001 1000
 
