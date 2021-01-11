@@ -50,10 +50,10 @@ int cmdRepeatCount;
 int bitDuration = 104 - 1; //Duration of one LANC bit in microseconds.
 
 bool _play = 0;
-bool _play_stop = 0;    //switch between Hi8 Play/Stop or Z-CAM F1_press/F1_release
-int _plinkertime = 700;
 
-int _debouncetime = 120;
+int _plinkertime = 5000; //700 microseconds
+
+int _debouncetime = 5; //milliseconds
 
 //Start-stop video
 boolean _PLAY[] = {LOW, LOW, LOW, HIGH, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW}; //18 34 - 0001 1000 0011 0100
@@ -72,59 +72,35 @@ boolean _FNRELEASE[] = {LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, L
 void setup() {
   pinMode(lancPin, INPUT_PULLUP); //listens to the LANC line
   pinMode(cmdPin, OUTPUT); //writes to the LANC line
-  pinMode(recButton, INPUT_PULLUP); //start-stop recording button
+  pinMode(recButton, INPUT_PULLUP); //start-stop recording button //turn on an internal pull up resistor
   pinMode(trigger, OUTPUT); //writes to the LANC line
   pinMode(LED, OUTPUT);
   pinMode(fake_pin, OUTPUT);
-
   digitalWrite(fake_pin, HIGH);
-  digitalWrite(recButton, HIGH); //turn on an internal pull up resistor
   digitalWrite(cmdPin, LOW); //set LANC line to +5V
   digitalWrite(trigger, HIGH);
   digitalWrite(LED, LOW);
-
   delay(1000); //Wait for camera to power up completly
-
   bitDuration = bitDuration - 8; //Writing to the digital port takes about 8 microseconds so only 96 microseconds are left till the end of each bit
-
   plinker_mal();
 }
 
 void loop() {
   //#####button trigger?#####
   if (!digitalRead(recButton)) {
-    delay(5); //--> debounce
+    delay(_debouncetime); //--> debounce Relais
     if (!digitalRead(recButton)) {
-      //#####boolean FN/FN#####
-      if (_play_stop == 0) {    //switch between Hi8 (1) or Z-Cam (0) for test purposes
-        lancCommand(_F1PRESS);
-        plinker_mal();
-        lancCommand(_F1RELEASE);
-      }
-      //#####boolean play/stop#####
-      if (_play_stop == 1) {    //switch between Hi8 (1) or Z-Cam (0) for test purposes
-        if (!_play) {
-          lancCommand(_PLAY);
-          _play = 1;
-          digitalWrite(trigger, HIGH);
-          plinker_mal();
-          digitalWrite(LED, HIGH);
-        }
-        else {
-          lancCommand(_STOP);
-          _play = 0;
-          digitalWrite(trigger, LOW);
-          digitalWrite(LED, LOW);
-        }
-      }
-      delay(_debouncetime); //debounce button
+      lancCommand(_F1PRESS);
+      lancCommand(_F1PRESS);
+      lancCommand(_F1RELEASE);
+      plinker_mal();
     }
   }
 }
 
 void lancCommand(boolean lancBit[]) {
   cmdRepeatCount = 0;
-  while (cmdRepeatCount < 5) {  //repeat 5 times to make sure the camera accepts the command
+  while (cmdRepeatCount < 3) {  //repeat 5 times to make sure the camera accepts the command
     while (pulseIn(lancPin, HIGH) < 5000) {
       //"pulseIn, HIGH" catches any 0V TO +5V TRANSITION and waits until the LANC line goes back to 0V
       //"pulseIn" also returns the pulse duration so we can check if the previous +5V duration was long enough (>5ms) to be the pause before a new 8 byte data packet
@@ -169,9 +145,9 @@ void lancCommand(boolean lancBit[]) {
     //Byte 2 is written now put LANC line back to +5V
     digitalWrite(cmdPin, LOW);
     cmdRepeatCount++;  //increase repeat count by 1
-    /*Control bytes 0 and 1 are written, now don’t care what happens in Bytes 2 to 7
+    /*Control bytes 0, 1 and 2 are written, now don’t care what happens in Bytes 3 to 7
       and just wait for the next start bit after a long pause to send the first two command bytes again.*/
-  }//While cmdRepeatCount < 5
+  }
 }
 
 void plinker_mal() {
