@@ -36,7 +36,7 @@
 
   time between two telegrams is 20ms
   each telegram has to repeated 5 times
-  for Z-CAM there are two telegrams to send, therefore max framerate is 200ms -> 5Hz max (4.5Hz including jitter)
+  for Z-CAM there are assumingly two telegrams to send, therefore max framerate is 200ms -> 5Hz max (4.5Hz including jitter)
 */
 
 #define cmdPin 2 //7 
