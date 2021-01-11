@@ -90,9 +90,13 @@ void loop() {
   if (!digitalRead(recButton)) {
     delay(_debouncetime); //--> debounce Relais
     if (!digitalRead(recButton)) {
-      //lancCommand(_F1PRESS);
       lancCommand(_F1PRESS);
+      delay(75);
       lancCommand(_F1RELEASE);
+      delay(75);
+      //lancCommand(_F1PRESS);
+      //delay(75);
+      //lancCommand(_F1RELEASE);
       plinker_mal();
     }
   }
@@ -100,7 +104,7 @@ void loop() {
 
 void lancCommand(boolean lancBit[]) {
   cmdRepeatCount = 0;
-  while (cmdRepeatCount < 1) {  //repeat 5 times to make sure the camera accepts the command
+  while (cmdRepeatCount < 3) {  //repeat 5 times to make sure the camera accepts the command
     while (pulseIn(lancPin, HIGH) < 5000) {
       //"pulseIn, HIGH" catches any 0V TO +5V TRANSITION and waits until the LANC line goes back to 0V
       //"pulseIn" also returns the pulse duration so we can check if the previous +5V duration was long enough (>5ms) to be the pause before a new 8 byte data packet

@@ -58,6 +58,7 @@ int _debouncetime = 5; //milliseconds
 //Start-stop video
 boolean _PLAY[] = {LOW, LOW, LOW, HIGH, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW}; //18 34 - 0001 1000 0011 0100
 boolean _STOP[] = {LOW, LOW, LOW, HIGH, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, HIGH, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW}; //18 30 - 0001 1000 0011 0000
+boolean _REC[] =  {LOW, LOW, LOW, HIGH, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, HIGH, LOW, LOW, HIGH, HIGH, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW}; // 18 33 00 - 0001 1000 0011 0011 0000 0000
 
 //Press release Fn
 boolean _F1PRESS[] =   {LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};   //55 54 00 - 0101 0101 0101 0100 0000 0000
@@ -68,6 +69,9 @@ boolean _F3PRESS[] =   {LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, L
 boolean _F3RELEASE[] = {LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, LOW, LOW, HIGH, LOW}; // 55 54 12 - 0101 0101 0101 0100 0001 0010
 boolean _FNPRESS[] =   {LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, LOW, LOW, HIGH, HIGH}; // 55 54 13 - 0101 0101 0101 0100 0001 0011
 boolean _FNRELEASE[] = {LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, LOW, HIGH, LOW, LOW}; // 55 54 14 - 0101 0101 0101 0100 0001 0100
+//boolean _Rec[] =     {LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, LOW, HIGH, HIGH, HIGH}; // 55 54 17 - 0101 0101 0101 0100 0001 0111
+boolean _Rec[] =       {LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, HIGH, LOW, LOW, LOW}; // 55 54 18 - 0101 0101 0101 0100 0001 1000
+
 
 void setup() {
   pinMode(lancPin, INPUT_PULLUP); //listens to the LANC line
@@ -90,16 +94,20 @@ void loop() {
   if (!digitalRead(recButton)) {
     delay(_debouncetime); //--> debounce Relais
     if (!digitalRead(recButton)) {
+      lancCommand(_Rec);
+      delay(300);
+      lancCommand(_Rec);
       //lancCommand(_F1PRESS);
-      lancCommand(_F1RELEASE);
-      //plinker_mal();
+      //delay(75);
+      //lancCommand(_F1RELEASE);
+      plinker_mal();
     }
   }
 }
 
 void lancCommand(boolean lancBit[]) {
   cmdRepeatCount = 0;
-  while (cmdRepeatCount < 1) {  //repeat 5 times to make sure the camera accepts the command
+  while (cmdRepeatCount < 3) {  //repeat 5 times to make sure the camera accepts the command
     while (pulseIn(lancPin, HIGH) < 5000) {
       //"pulseIn, HIGH" catches any 0V TO +5V TRANSITION and waits until the LANC line goes back to 0V
       //"pulseIn" also returns the pulse duration so we can check if the previous +5V duration was long enough (>5ms) to be the pause before a new 8 byte data packet
