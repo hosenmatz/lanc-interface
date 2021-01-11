@@ -99,7 +99,7 @@ void loop() {
 
 void lancCommand(boolean lancBit[]) {
   cmdRepeatCount = 0;
-  while (cmdRepeatCount < 1) {  //repeat 5 times to make sure the camera accepts the command
+  while (cmdRepeatCount < 3) {  //repeat 5 times to make sure the camera accepts the command
     while (pulseIn(lancPin, HIGH) < 5000) {
       //"pulseIn, HIGH" catches any 0V TO +5V TRANSITION and waits until the LANC line goes back to 0V
       //"pulseIn" also returns the pulse duration so we can check if the previous +5V duration was long enough (>5ms) to be the pause before a new 8 byte data packet
@@ -149,7 +149,7 @@ void lancCommand(boolean lancBit[]) {
   }
 }
 
-void plinker_mal() {
+void plinker_mal() {  //blink inbuild LED
   for (int i = 0 ; i < 1 ; i++) {
     digitalWrite(LED, HIGH);
     digitalWrite(trigger, HIGH);
