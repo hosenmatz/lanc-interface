@@ -33,26 +33,29 @@
   | Fn release  | 55 54 14 00 00 00 00 00 | | - 0101 0101 0101 0100 0001 0100
 
   time between two telegrams is 20ms
-  each telegram has to repeated 4-5 times
+  each telegram has to repeated 5 times
+  for Z-CAM there are two telegrams to send, therefore max framerate is 200ms -> 5Hz max (4.5Hz including jitter)
 */
 
 #define cmdPin 2 //7 
 #define lancPin 3 //11
 #define recButton 4
+#define trigger 12
 #define LED LED_BUILTIN
 
-
+//A0=14, A1=15, usw. (in arduino nano A6 and A7 are assumingly not routed)
+#define fake_pin 14
 
 int cmdRepeatCount;
 int bitDuration = 104 - 1; //Duration of one LANC bit in microseconds.
 
 bool _play = 0;
 
-int _twinkletime = 5000; //700 microseconds
+int _plinkertime = 5000; //700 microseconds
 
 int _debouncetime = 5; //milliseconds
 
-//Start-stop video - Hi8 Cam
+//Start-stop video
 boolean _PLAY[] = {LOW, LOW, LOW, HIGH, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, HIGH, LOW, HIGH, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW}; //18 34 - 0001 1000 0011 0100
 boolean _STOP[] = {LOW, LOW, LOW, HIGH, HIGH, LOW, LOW, LOW, LOW, LOW, HIGH, HIGH, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW}; //18 30 - 0001 1000 0011 0000
 
@@ -70,29 +73,34 @@ void setup() {
   pinMode(lancPin, INPUT_PULLUP); //listens to the LANC line
   pinMode(cmdPin, OUTPUT); //writes to the LANC line
   pinMode(recButton, INPUT_PULLUP); //start-stop recording button //turn on an internal pull up resistor
+  pinMode(trigger, OUTPUT); //writes to the LANC line
   pinMode(LED, OUTPUT);
+  pinMode(fake_pin, OUTPUT);
+  digitalWrite(fake_pin, HIGH);
   digitalWrite(cmdPin, LOW); //set LANC line to +5V
+  digitalWrite(trigger, HIGH);
   digitalWrite(LED, LOW);
   delay(1000); //Wait for camera to power up completly
   bitDuration = bitDuration - 8; //Writing to the digital port takes about 8 microseconds so only 96 microseconds are left till the end of each bit
-  twinkle_to_me();
+  plinker_mal();
 }
 
 void loop() {
-  //#####button triggered?#####
+  //#####button trigger?#####
   if (!digitalRead(recButton)) {
     delay(_debouncetime); //--> debounce Relais
     if (!digitalRead(recButton)) {
       //lancCommand(_F1PRESS);
+      lancCommand(_F1PRESS);
       lancCommand(_F1RELEASE);
-      twinkle_to_me();
+      plinker_mal();
     }
   }
 }
 
 void lancCommand(boolean lancBit[]) {
   cmdRepeatCount = 0;
-  while (cmdRepeatCount < 3) {  //repeat 4-5 times to make sure the camera accepts the command
+  while (cmdRepeatCount < 1) {  //repeat 5 times to make sure the camera accepts the command
     while (pulseIn(lancPin, HIGH) < 5000) {
       //"pulseIn, HIGH" catches any 0V TO +5V TRANSITION and waits until the LANC line goes back to 0V
       //"pulseIn" also returns the pulse duration so we can check if the previous +5V duration was long enough (>5ms) to be the pause before a new 8 byte data packet
@@ -142,12 +150,14 @@ void lancCommand(boolean lancBit[]) {
   }
 }
 
-void twinkle_to_me() {
+void plinker_mal() {
   for (int i = 0 ; i < 1 ; i++) {
     digitalWrite(LED, HIGH);
-    delayMicroseconds(_twinkletime);
+    digitalWrite(trigger, HIGH);
+    delayMicroseconds(_plinkertime);
     digitalWrite(LED, LOW);
-    delayMicroseconds(_twinkletime);
+    digitalWrite(trigger, LOW);
+    delayMicroseconds(_plinkertime);
     //Serial.print("snapshot");
   }
 }
